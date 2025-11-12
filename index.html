@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>馬力歐風格抽獎轉盤</title>
+    <link rel="stylesheet" href="mario-styles.css">
+</head>
+<body>
+
+    <div class="container">
+        <h1>超級抽獎轉盤</h1>
+        <div class="wheel-container">
+            <div class="pointer"></div>
+            <canvas id="wheelCanvas" width="500" height="500"></canvas>
+        </div>
+        <button id="spinButton">旋轉！</button>
+        <div id="result">獎品是...？</div>
+    </div>
+
+    <script>
+        const countries = [
+            '美國', '日本', '英國', '法國', '加拿大', '德國',
+            '澳大利亞', '義大利', '韓國', '巴西', '西班牙', '泰國'
+        ];
+        const colors = ['#E74C3C', '#3498DB', '#2ECC71', '#F1C40F', '#9B59B6', '#1ABC9C'];
+
+        const canvas = document.getElementById('wheelCanvas');
+        const ctx = canvas.getContext('2d');
+        const spinButton = document.getElementById('spinButton');
+        const resultElement = document.getElementById('result');
+
+        const numSegments = countries.length;
+        const arcSize = (2 * Math.PI) / numSegments;
+        const radius = canvas.width / 2 - 10;
+        let currentAngle = 0;
+        let isSpinning = false;
+
+        function drawWheel() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.save();
+            ctx.translate(canvas.width / 2, canvas.height / 2);
+            ctx.rotate(currentAngle);
+
+            for (let i = 0; i < numSegments; i++) {
+                const angle = i * arcSize;
+                ctx.beginPath();
+                ctx.fillStyle = colors[i % colors.length];
+                ctx.moveTo(0, 0);
+                ctx.arc(0, 0, radius, angle, angle + arcSize);
+                ctx.lineTo(0, 0);
+                ctx.fill();
+
+                // 繪製文字
+                ctx.save();
+                ctx.fillStyle = '#FFFFFF';
+                ctx.font = 'bold 20px "Press Start 2P", sans-serif';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                const textAngle = angle + arcSize / 2;
+                ctx.rotate(textAngle);
+                ctx.fillText(countries[i], radius * 0.65, 0);
+                ctx.restore();
+            }
+            ctx.restore();
+        }
+
+        function spin() {
+            if (isSpinning) return;
+            isSpinning = true;
+            resultElement.textContent = '轉動中...';
+            spinButton.disabled = true;
+
+            const spinAngle = Math.random() * 10 + 10; // 旋轉圈數
+            const spinTime = 3000; // 旋轉時間 (ms)
+            const startTime = performance.now();
+
+            function animate(currentTime) {
+                const elapsedTime = currentTime - startTime;
+                const progress = Math.min(elapsedTime / spinTime, 1);
+                // Ease-out effect
+                const easeOutProgress = 1 - Math.pow(1 - progress, 3);
+                
+                currentAngle = spinAngle * easeOutProgress * 2 * Math.PI;
+                drawWheel();
+
+                if (progress < 1) {
+                    requestAnimationFrame(animate);
+                } else {
+                    endSpin();
+                }
+            }
+
+            requestAnimationFrame(animate);
+        }
+
+        function endSpin() {
+            const finalAngle = currentAngle % (2 * Math.PI);
+            // The pointer is at the top (270 degrees or 1.5 * PI).
+            // We calculate the angle on the un-rotated wheel that is now under the pointer.
+            let winningAngle = (1.5 * Math.PI) - finalAngle;
+            
+            // Normalize the angle to be between 0 and 2 * PI to get the correct index.
+            const normalizedAngle = (winningAngle % (2 * Math.PI) + (2 * Math.PI)) % (2 * Math.PI);
+            
+            const winningSegment = Math.floor(normalizedAngle / arcSize);
+            const winningCountry = countries[winningSegment];
+            
+            resultElement.textContent = `恭喜抽中：${winningCountry}！`;
+            isSpinning = false;
+            spinButton.disabled = false;
+        }
+
+        spinButton.addEventListener('click', spin);
+
+        // 初始繪製
+        // 使用字體前先載入
+        document.fonts.load('20px "Press Start 2P"').then(() => {
+            drawWheel();
+        });
+
+    </script>
+    <!-- Google Font for Mario style -->
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+</body>
+</html>
